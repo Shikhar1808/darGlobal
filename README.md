@@ -86,7 +86,7 @@ Every choice, with the reason and what it replaced or ruled out.
 - **NDJSON stream.** One line with result cards, then text pieces, so cards and text arrive on the same connection.
 - **Redis for the model cache (7 days) and chat memory (24 h).** Survives restarts and redeploys and expires on its own; without `REDIS_URL` it falls back to memory.
 - **Redis in Docker Compose.** `redis:8` includes the modules LangGraph's Redis memory needs, which managed services like ElastiCache lack.
-- **AWS: one EC2 instance running Docker Compose.** The same stack as tested locally; App Runner is closed to new customers, and ECS + ElastiCache is more setup for the same result.
+- **AWS: one EC2 instance running Docker Compose, Caddy for HTTPS.** The same stack as tested locally; App Runner is closed to new customers, and ECS + ElastiCache is more setup for the same result. Caddy gets the certificate on its own; without a domain, `<ip>.sslip.io` points at the server. API keys go into `.env` over SSH, never into user data.
 - **uv for Python.** One lock file for local runs and the Docker image.
 - **Page design.** Gulf blue, sea green for Wasalt and brass for DarGlobal; one font family covers English and Arabic; starter questions grouped by where the answer comes from.
 
@@ -98,6 +98,20 @@ docker compose up --build       # chatbot + Redis → http://localhost:7860
 ```
 
 Without Docker: `uv sync`, `docker compose up -d redis` (or leave `REDIS_URL` empty for in-memory), then `uv run --env-file .env uvicorn app.main:app --port 8000`.
+
+## Deploy on AWS
+
+Files in [deploy/](deploy/). One EC2 instance; about USD 15 a month for a t3.small, less inside the free tier.
+
+1. **Launch an instance** (EC2 console): Ubuntu 24.04, t3.small (2 GB), 8 GB disk is enough (the free tier allows up to 30). Security group: SSH (22) from your IP only, HTTP (80) and HTTPS (443) from anywhere. Under *Advanced details → User data*, paste [deploy/user-data.sh](deploy/user-data.sh) (installs Docker, adds swap, clones this repo).
+2. **Give it a fixed address:** allocate an Elastic IP and associate it, so the URL doesn't change on a restart.
+3. **Add keys and start**, over SSH or EC2 Instance Connect:
+   ```sh
+   cd darGlobal && cp .env.example .env && nano .env   # paste your OpenRouter key(s)
+   sh deploy/up.sh                                      # prints https://<ip>.sslip.io
+   ```
+   With your own domain: point an A record at the Elastic IP, then `DOMAIN=chat.example.com sh deploy/up.sh`.
+4. **Update later:** `sh deploy/up.sh` again (pulls and rebuilds).
 
 ## Data and scraping
 

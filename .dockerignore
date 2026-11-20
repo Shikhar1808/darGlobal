@@ -10,3 +10,4 @@ data/*.raw.json
 docs
 .models
 data/embeddings.npz
+deploy

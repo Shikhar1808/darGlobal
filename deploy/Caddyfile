@@ -1,0 +1,6 @@
+# HTTPS in front of the app. DOMAIN comes from deploy/up.sh (e.g. 3-110-20-5.sslip.io); Caddy gets the certificate itself.
+{$DOMAIN} {
+	reverse_proxy app:7860 {
+		flush_interval -1 # send each streamed piece right away instead of buffering the reply
+	}
+}
