@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Property Assistant</title>
+<meta name="description" content="Ask about DarGlobal's branded developments and 571 Saudi homes for sale and rent on Wasalt, in English or Arabic. Every answer links to the property's page.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Property Assistant">
+<meta property="og:title" content="Property Assistant: DarGlobal projects and Saudi homes">
+<meta property="og:description" content="A bilingual chatbot over DarGlobal's projects and FAQ and Wasalt's Saudi listings. Answers with links, prices in your currency, on a map.">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#123447">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23123447'/%3E%3Cpath d='M7 16.5 16 9l9 7.5V25h-6v-5.5h-6V25H7z' fill='%23c9a66a'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
@@ -18,28 +26,31 @@
     :root { --bg: #0c1b24; --panel: #13262f; --ink: #e4ecea; --muted: #94a6a9; --line: #24404b;
             --deep: #1d4a60; --deep-ink: #eef4f3; --sea: #5fb3a1; --brass: #c9a66a; --err: #ff8a80; }
   }
+  html[lang="ar"] { --display: "IBM Plex Sans Arabic", system-ui, sans-serif; }  /* the display face has no Arabic */
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body);
-         height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; }
+         height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
   .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 16px; }
   button, input { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
+  [hidden] { display: none !important; }
 
   header { border-bottom: 1px solid var(--line); background: var(--panel); }
   header .wrap { display: flex; align-items: center; gap: 12px; min-height: 56px; }
-  header h1 { margin: 0; font: 600 18px/1.2 var(--display); letter-spacing: -.01em; }
+  header h1 { margin: 0; font: 600 18px/1.2 var(--display); letter-spacing: -.01em; white-space: nowrap; }
   header p { margin: 0; color: var(--muted); font-size: 13px; }
-  #reset { margin-left: auto; flex: none; border: 1px solid var(--line); background: transparent; border-radius: 8px;
-           padding: 6px 12px; font-size: 14px; cursor: pointer; }
-  #reset:hover { border-color: var(--muted); }
-  #reset:disabled { opacity: .5; cursor: wait; }
+  .tools { margin-inline-start: auto; display: flex; gap: 8px; flex: none; }
+  .ghost { border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  .ghost:hover { border-color: var(--muted); }
+  .ghost:disabled { opacity: .5; cursor: wait; }
 
   #scroll { overflow-y: auto; }
   #log { display: flex; flex-direction: column; gap: 20px; padding-block: 28px; }
 
   .welcome h2 { margin: 8px 0 12px; font: 650 clamp(32px, 6vw, 52px)/1.04 var(--display); letter-spacing: -.025em;
                 color: var(--deep); max-width: 15ch; }
+  html[lang="ar"] .welcome h2 { letter-spacing: 0; line-height: 1.25; }
   @media (prefers-color-scheme: dark) { .welcome h2 { color: var(--ink); } }
   .welcome > p { margin: 0 0 28px; color: var(--muted); max-width: 58ch; }
   .groups { display: grid; gap: 22px; }
@@ -54,15 +65,26 @@
                   font-size: 14px; line-height: 1.4; cursor: pointer; text-align: start; }
   .chips button:hover { border-color: var(--c); }
 
-  .msg { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
-  .user { align-self: flex-end; max-width: 80%; background: var(--deep); color: var(--deep-ink);
-          padding: 9px 16px; border-radius: 20px 20px 6px 20px; }
+  .msg { overflow-wrap: anywhere; unicode-bidi: plaintext; }
+  .user { align-self: flex-end; max-width: 80%; background: var(--deep); color: var(--deep-ink); white-space: pre-wrap;
+          padding: 9px 16px; border-radius: 20px; border-end-end-radius: 6px; }
   .bot { align-self: stretch; padding-inline-start: 16px; border-inline-start: 2px solid var(--sea); }
+  .bot p { margin: 0 0 .55em; }
+  .bot p:last-child, .bot ul:last-child, .bot ol:last-child { margin-bottom: 0; }
+  .bot ul, .bot ol { margin: 0 0 .7em; padding-inline-start: 1.3em; }
+  .bot li { margin-bottom: .35em; }
+  .bot li::marker { color: var(--sea); }
   .bot a { color: var(--sea); text-underline-offset: 2px; }
+  .bot .note { color: var(--muted); font-size: 14px; }
   .err { border-color: var(--err); color: var(--err); }
+  .err button { display: block; margin-top: 8px; color: var(--ink); }
   .status { color: var(--muted); animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .45; } }
   @media (prefers-reduced-motion: reduce) { .status { animation: none; } }
+
+  .fb { display: flex; gap: 8px; align-items: center; margin-top: -8px; padding-inline-start: 18px; font-size: 13px; color: var(--muted); }
+  .fb button { padding: 3px 10px; font-size: 13px; color: var(--muted); }
+  .fb button:hover { color: var(--ink); }
 
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--sea); border-radius: 6px;
@@ -70,6 +92,7 @@
   .card.project { border-top-color: var(--brass); }
   .card .src { font-size: 12px; color: var(--muted); }
   .card h4 { margin: 2px 0 2px; font: 600 16px/1.25 var(--display); }
+  .card h4, .card span { unicode-bidi: plaintext; }  /* "675 sqm" stays in order on the Arabic page */
   .card .price { font-weight: 600; }
   .card .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); }
   .card .place { color: var(--muted); }
@@ -77,71 +100,93 @@
   .card.project a { color: var(--brass); }
   .card a:hover { text-decoration: underline; }
 
+  .map { height: 260px; border: 1px solid var(--line); border-radius: 6px; z-index: 0; background: var(--panel); }
+  .map .pop { display: grid; gap: 2px; font: 13px/1.4 var(--body); }
+  .map .pop a { color: var(--sea); font-weight: 600; }
+  @media (prefers-color-scheme: dark) { .map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9); } }
+
   footer { border-top: 1px solid var(--line); background: var(--panel); padding-block: 12px 10px; }
   form { display: flex; gap: 8px; }
   input { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
   input:focus-visible { outline-offset: 0; }
-  #send { padding: 0 22px; border: 0; border-radius: 12px; background: var(--deep); color: var(--deep-ink); font-weight: 600; cursor: pointer; }
-  #send:disabled { opacity: .5; cursor: wait; }
+  #send { min-width: 76px; padding: 0 22px; border: 0; border-radius: 12px; background: var(--deep); color: var(--deep-ink); font-weight: 600; cursor: pointer; }
+  #send.stop { background: transparent; color: var(--ink); border: 1px solid var(--muted); }
   footer small { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
-  @media (max-width: 520px) { header p { display: none; } }
+  @media (max-width: 560px) { header p { display: none; } }
 </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <h1>Property Assistant</h1>
-    <p>DarGlobal projects and Saudi homes on Wasalt, in English or العربية</p>
-    <button id="reset" type="button">New chat</button>
+    <h1 data-t="title">Property Assistant</h1>
+    <p data-t="sub">DarGlobal projects and Saudi homes on Wasalt</p>
+    <div class="tools">
+      <button id="lang" class="ghost" type="button" lang="ar">العربية</button>
+      <button id="reset" class="ghost" type="button" data-t="newChat">New chat</button>
+    </div>
   </div>
 </header>
 <div id="scroll">
   <main id="log" class="wrap" aria-live="polite">
     <section class="welcome" id="welcome">
-      <h2>Ask about a home, a project, or how buying works.</h2>
-      <p>I search DarGlobal's 32 branded developments and company pages, and 571 homes for sale and rent in Saudi Arabia on Wasalt. Every property comes with a link to its page.</p>
-      <div class="groups">
-        <div class="group dg">
-          <h3>DarGlobal projects</h3>
-          <div class="chips">
-            <button>Which DarGlobal projects are in Oman?</button>
-            <button>Apartments with Aston Martin interiors</button>
-            <button>مشاريع دار جلوبال في إسبانيا</button>
-          </div>
-        </div>
-        <div class="group">
-          <h3>Homes for sale and rent in Saudi Arabia</h3>
-          <div class="chips">
-            <button>3-bedroom apartments for sale in Jeddah under 1M SAR</button>
-            <button>Apartments for rent in Riyadh under £2,000 a month</button>
-            <button>فلل للإيجار في الرياض</button>
-          </div>
-        </div>
-        <div class="group buy">
-          <h3>Buying with DarGlobal</h3>
-          <div class="chips">
-            <button>Can I get a golden visa if I buy in Dubai?</button>
-            <button>I want to buy a Trump villa in Oman, how do I register?</button>
-            <button>ما هي خطط الدفع المتاحة؟</button>
-          </div>
-        </div>
-      </div>
+      <h2 data-t="h2">Ask about a home, a project, or how buying works.</h2>
+      <p data-t="intro">I search DarGlobal's 32 branded developments and company pages, and 571 homes for sale and rent in Saudi Arabia on Wasalt. Every property comes with a link to its page.</p>
+      <div class="groups" id="groups"></div>
     </section>
   </main>
 </div>
 <footer>
   <div class="wrap">
     <form id="f">
-      <input id="q" dir="auto" autocomplete="off" maxlength="1000" placeholder="Ask about a property, a project or buying…" aria-label="Your question" required>
+      <input id="q" dir="auto" autocomplete="off" maxlength="1000" aria-label="Your question" required>
       <button id="send">Ask</button>
     </form>
-    <small>Prices and availability change. Check the linked page before you decide.</small>
+    <small data-t="note">Prices and availability change. Check the linked page before you decide.</small>
   </div>
 </footer>
 <script>
-  const log = document.getElementById('log'), scroll = document.getElementById('scroll'), q = document.getElementById('q'),
-        send = document.getElementById('send'), welcome = document.getElementById('welcome');
-  let thread = null;
+  const T = {
+    en: {
+      title: 'Property Assistant', sub: 'DarGlobal projects and Saudi homes on Wasalt', newChat: 'New chat', other: 'العربية',
+      h2: 'Ask about a home, a project, or how buying works.',
+      intro: "I search DarGlobal's 32 branded developments and company pages, and 571 homes for sale and rent in Saudi Arabia on Wasalt. Every property comes with a link to its page.",
+      groups: [
+        ['dg', 'DarGlobal projects', ['Which DarGlobal projects are in Oman?', 'Apartments with Aston Martin interiors', 'مشاريع دار جلوبال في إسبانيا']],
+        ['', 'Homes for sale and rent in Saudi Arabia', ['3-bedroom apartments for sale in Jeddah under 1M SAR', 'Apartments for rent in Riyadh under £2,000 a month', 'فلل للإيجار في الرياض']],
+        ['buy', 'Buying with DarGlobal', ['Can I get a golden visa if I buy in Dubai?', 'I want to buy a Trump villa in Oman, how do I register?', 'ما هي خطط الدفع المتاحة؟']],
+      ],
+      placeholder: 'Ask about a property, a project or buying…', ask: 'Ask', stop: 'Stop', label: 'Your question',
+      note: 'Prices and availability change. Check the linked page before you decide.',
+      searching: 'Searching listings and projects…', found: n => `Found ${n} matches, writing the answer…`,
+      noReply: 'No reply came back. Ask again.', stopped: 'Stopped.', retry: 'Try again',
+      short: 'Please send a shorter message.', down: 'The assistant is unavailable right now. Try again in a minute.', broke: 'Something went wrong. Ask again.',
+      helpful: 'Helpful', notHelpful: 'Not helpful', thanks: 'Thanks, noted.',
+      view: s => 'View on ' + s, badge: b => b, map: 'Map of the listings above',
+    },
+    ar: {
+      title: 'المساعد العقاري', sub: 'مشاريع دار جلوبال والعقارات السعودية على وصلت', newChat: 'محادثة جديدة', other: 'English',
+      h2: 'اسأل عن منزل أو مشروع أو طريقة الشراء.',
+      intro: 'أبحث في 32 مشروعًا من مشاريع دار جلوبال وصفحات الشركة، وفي 571 عقارًا للبيع والإيجار في السعودية على وصلت. كل عقار يأتي مع رابط صفحته.',
+      groups: [
+        ['dg', 'مشاريع دار جلوبال', ['ما هي مشاريع دار جلوبال في عُمان؟', 'شقق بتصميم داخلي من أستون مارتن', 'مشاريع دار جلوبال في إسبانيا']],
+        ['', 'عقارات للبيع والإيجار في السعودية', ['شقق من 3 غرف للبيع في جدة بأقل من مليون ريال', 'فلل للإيجار في الرياض', 'شقق للإيجار في الرياض بأقل من 5000 ريال شهريًا']],
+        ['buy', 'الشراء مع دار جلوبال', ['هل يمكنني الحصول على الإقامة الذهبية إذا اشتريت في دبي؟', 'ما هي خطط الدفع المتاحة؟', 'أين يقع مكتب دار جلوبال في لندن؟']],
+      ],
+      placeholder: 'اسأل عن عقار أو مشروع أو طريقة الشراء…', ask: 'اسأل', stop: 'إيقاف', label: 'سؤالك',
+      note: 'الأسعار والتوفر يتغيران. راجع الصفحة المرتبطة قبل أن تقرر.',
+      searching: 'جارٍ البحث في العقارات والمشاريع…', found: n => `وجدنا ${n} نتيجة، جارٍ كتابة الرد…`,
+      noReply: 'لم يصل أي رد. اسأل مرة أخرى.', stopped: 'تم الإيقاف.', retry: 'حاول مرة أخرى',
+      short: 'يرجى إرسال رسالة أقصر.', down: 'المساعد غير متاح الآن. حاول مرة أخرى بعد دقيقة.', broke: 'حدث خطأ. اسأل مرة أخرى.',
+      helpful: 'مفيد', notHelpful: 'غير مفيد', thanks: 'شكرًا، تم تسجيل رأيك.',
+      view: s => 'عرض على ' + (s === 'DarGlobal' ? 'دار جلوبال' : 'وصلت'),
+      badge: b => ({ 'For sale': 'للبيع', 'For rent': 'للإيجار', 'DarGlobal project': 'مشروع دار جلوبال' })[b] || b,
+      map: 'خريطة العقارات أعلاه',
+    },
+  };
+
+  const $ = id => document.getElementById(id);
+  const log = $('log'), scroll = $('scroll'), q = $('q'), send = $('send'), welcome = $('welcome'), reset = $('reset');
+  let thread = null, lang = 'en', busy = false, ctrl = null;
   try { thread = sessionStorage.getItem('thread'); } catch (e) {}
 
   function el(tag, cls, text) {
@@ -150,32 +195,89 @@
     if (text) e.textContent = text;
     return e;
   }
-
   function toBottom() { scroll.scrollTop = scroll.scrollHeight; }
 
-  function add(text, cls) {
-    const d = el('div', 'msg ' + cls);
-    d.dir = 'auto';  // Arabic replies read right to left
-    log.appendChild(d);
-    return show(d, text);
+  // ---- page language
+  function setLang(l) {
+    lang = l;
+    const t = T[l];
+    document.documentElement.lang = l;
+    document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+    document.title = t.title;
+    document.querySelectorAll('[data-t]').forEach(e => { e.textContent = t[e.dataset.t]; });
+    q.placeholder = t.placeholder; q.setAttribute('aria-label', t.label);
+    send.textContent = busy ? t.stop : t.ask;
+    $('lang').textContent = t.other; $('lang').lang = l === 'ar' ? 'en' : 'ar';
+    $('groups').replaceChildren(...t.groups.map(([cls, title, chips]) => {
+      const g = el('div', 'group ' + cls), box = el('div', 'chips');
+      g.append(el('h3', '', title), box);
+      for (const c of chips) {
+        const b = el('button', '', c);
+        b.type = 'button'; b.dir = 'auto';
+        b.addEventListener('click', () => ask(c));
+        box.append(b);
+      }
+      return g;
+    }));
+    try { localStorage.setItem('lang', l); } catch (e) {}
+  }
+  $('lang').addEventListener('click', () => setLang(lang === 'ar' ? 'en' : 'ar'));
+
+  // ---- reply formatting: a small, safe subset of markdown (lists, bold, links)
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const bold = h => h.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)|https?:\/\/[^\s<>")\]،؛]+/g;
+  function inline(s) {
+    let out = '', last = 0;
+    for (const m of s.matchAll(LINK)) {
+      let url = m[2] || m[0], tail = '';
+      if (!m[2]) { tail = url.match(/[.,;:!?']*$/)[0]; url = url.slice(0, url.length - tail.length); }
+      out += bold(esc(s.slice(last, m.index))) +
+             `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(m[1] || url)}</a>` + esc(tail);
+      last = m.index + m[0].length;
+    }
+    return out + bold(esc(s.slice(last)));
+  }
+  function render(text) {
+    const out = [];
+    let list = null, kind = '';
+    const flush = () => { if (list) out.push(`<${kind}>${list.join('')}</${kind}>`); list = null; };
+    for (const line of text.split('\n')) {
+      const item = line.match(/^\s*([-*•]|\d+[.)])\s+(.*)/);
+      if (item) {
+        const k = /\d/.test(item[1]) ? 'ol' : 'ul';
+        if (list && k !== kind) flush();
+        if (!list) { list = []; kind = k; }
+        list.push(`<li>${inline(item[2])}</li>`);
+        continue;
+      }
+      flush();
+      const head = line.match(/^#{1,4}\s+(.*)/);
+      if (head) out.push(`<p><strong>${inline(head[1])}</strong></p>`);
+      else if (line.trim()) out.push(`<p>${inline(line)}</p>`);
+    }
+    flush();
+    return out.join('');
   }
 
-  function show(d, text) {
-    d.textContent = text;
-    // turn bare URLs into links (text was inserted safely as textContent first)
-    d.innerHTML = d.innerHTML.replace(/https?:\/\/[^\s<>")\]،؛]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+  function add(text, cls) {
+    const d = el('div', 'msg ' + cls, text);
+    d.dir = 'auto';  // Arabic replies read right to left
+    log.appendChild(d);
     toBottom();
     return d;
   }
+  function say(d, text) { d.textContent = text; toBottom(); }
+  function sayReply(d, text) { d.innerHTML = render(text); toBottom(); }  // render() escapes everything it inserts
 
-  // result cards, only for properties the answer mentions (so cards and text agree)
+  // ---- result cards and map, only for properties the answer mentions (so cards and text agree)
   function addCards(cards, reply) {
     const shown = cards.filter(c => /^https:\/\//.test(c.url) && reply.includes(c.url));
     if (!shown.length) return;
-    const box = el('div', 'cards');
+    const t = T[lang], box = el('div', 'cards');
     for (const c of shown) {
       const card = el('article', 'card ' + c.kind);
-      card.append(el('span', 'src', c.badge), el('h4', '', c.title));
+      card.append(el('span', 'src', t.badge(c.badge)), el('h4', '', c.title));
       if (c.price) card.append(el('span', 'price', c.price));
       if (c.facts) {
         const facts = el('span', 'facts');
@@ -184,40 +286,93 @@
         card.append(facts);
       }
       if (c.place) card.append(el('span', 'place', c.place));
-      const a = el('a', '', 'View on ' + c.source);
+      const a = el('a', '', t.view(c.source));
       a.href = c.url; a.target = '_blank'; a.rel = 'noopener';
       card.append(a);
       box.append(card);
     }
     log.appendChild(box);
+    addMap(shown.filter(c => c.lat != null && c.lon != null));
     toBottom();
   }
 
-  let busy = false;  // one reply at a time: a second request or "New chat" mid-reply would mix two chats
-  const reset = document.getElementById('reset');
+  let leaflet = null;  // loaded on the first map only, so the page itself stays light
+  function loadLeaflet() {
+    return leaflet ||= new Promise((ok, fail) => {
+      const css = el('link'); css.rel = 'stylesheet';
+      css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+      const js = el('script'); js.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+      js.onload = () => ok(window.L);
+      js.onerror = () => { leaflet = null; fail(new Error('map library did not load')); };
+      document.head.append(css, js);
+    });
+  }
+  function addMap(pins) {
+    if (!pins.length) return;
+    const box = el('div', 'map');
+    box.setAttribute('role', 'region'); box.setAttribute('aria-label', T[lang].map);
+    log.appendChild(box);
+    loadLeaflet().then(L => {
+      const map = L.map(box, { scrollWheelZoom: false });
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+      const sea = getComputedStyle(document.documentElement).getPropertyValue('--sea').trim();
+      const pts = pins.map(c => {
+        const pop = el('div', 'pop');
+        const a = el('a', '', c.title); a.href = c.url; a.target = '_blank'; a.rel = 'noopener';
+        pop.append(a);
+        if (c.price) pop.append(el('span', '', c.price));
+        if (c.place) pop.append(el('span', '', c.place));
+        L.circleMarker([c.lat, c.lon], { radius: 8, color: '#fff', weight: 2, fillColor: sea, fillOpacity: 1 }).bindPopup(pop).addTo(map);
+        return [c.lat, c.lon];
+      });
+      map.fitBounds(pts, { padding: [30, 30], maxZoom: 14 });
+      toBottom();
+    }).catch(() => box.remove());
+  }
+
+  // ---- thumbs up/down, saved on the server as the start of an eval set from real questions
+  function addFeedback(question, answer) {
+    const t = T[lang], row = el('div', 'fb');
+    for (const [vote, label] of [['up', t.helpful], ['down', t.notHelpful]]) {
+      const b = el('button', 'ghost', label); b.type = 'button';
+      b.addEventListener('click', () => {
+        fetch('/api/feedback', { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ thread_id: thread, vote, question, answer: answer.slice(0, 8000) }) }).catch(() => {});
+        row.replaceChildren(t.thanks);
+      });
+      row.append(b);
+    }
+    log.appendChild(row);
+  }
+
+  function setBusy(on) {
+    busy = reset.disabled = on;
+    send.textContent = on ? T[lang].stop : T[lang].ask;
+    send.classList.toggle('stop', on);
+    send.type = on ? 'button' : 'submit';  // while busy the button stops the reply instead of sending
+  }
+  send.addEventListener('click', () => { if (busy && ctrl) ctrl.abort(); });
 
   async function ask(text) {
     if (busy) return;
-    busy = reset.disabled = true;
+    setBusy(true);
     welcome.hidden = true;
-    add(text, 'user');
-    // the server sends nothing until the answer starts, so this shows while filters are extracted and data searched
-    const arabic = /[؀-ۿ]/.test(text);
-    const wait = add(arabic ? 'جارٍ البحث في العقارات والمشاريع…' : 'Searching listings and projects…', 'bot status');
-    send.disabled = true;
+    const asked = add(text, 'user');
+    // status in the question's language; the server sends nothing until the answer starts
+    const t = /[؀-ۿ]/.test(text) ? T.ar : T[lang];
+    const wait = add(t.searching, 'bot status');
+    let reply = '', cards = [];
+    ctrl = new AbortController();
     try {
-      const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' },
+      const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: ctrl.signal,
         body: JSON.stringify(thread ? { message: text, thread_id: thread } : { message: text }) });
-      if (!r.ok) {
-        const data = await r.json().catch(() => ({}));  // proxies return HTML on timeout
-        throw new Error(typeof data.detail === 'string' ? data.detail
-          : r.status === 422 ? 'Please send a shorter message.' : 'The assistant is unavailable right now. Try again in a minute.');
-      }
+      if (!r.ok) throw new Error(r.status === 422 ? t.short : t.down);
       thread = r.headers.get('X-Thread-Id') || thread;
       try { sessionStorage.setItem('thread', thread); } catch (e) {}
       // NDJSON stream: {"cards": [...]} once, then {"t": "..."} text pieces
       const reader = r.body.getReader(), dec = new TextDecoder();
-      let buf = '', reply = '', cards = [];
+      let buf = '';
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -227,26 +382,35 @@
         for (const line of lines) {
           if (!line) continue;
           const ev = JSON.parse(line);
-          if (ev.cards) {
-            cards = ev.cards;
-            show(wait, arabic ? 'وجدنا ' + cards.length + ' نتيجة، جارٍ كتابة الرد…' : 'Found ' + cards.length + ' matches, writing the answer…');
-          } else if (ev.t) {
-            reply += ev.t;
-            wait.classList.remove('status');
-            show(wait, reply);
-          }
+          if (ev.cards) { cards = ev.cards; say(wait, t.found(cards.length)); }
+          else if (ev.t) { reply += ev.t; wait.classList.remove('status'); sayReply(wait, reply); }
         }
       }
       wait.classList.remove('status');
-      if (!reply) show(wait, 'No reply came back. Ask again.');
+      if (!reply) return say(wait, t.noReply);
       addCards(cards, reply);
+      addFeedback(text, reply);
     } catch (e) {
-      wait.remove(); add(typeof e.message === 'string' ? e.message : 'Something went wrong. Ask again.', 'bot err');
-    } finally { busy = reset.disabled = send.disabled = false; q.focus(); }
+      if (e.name === 'AbortError') {  // the user pressed Stop: keep what was written so far
+        wait.classList.remove('status');
+        if (reply) { sayReply(wait, reply); wait.append(el('p', 'note', t.stopped)); addCards(cards, reply); }
+        else say(wait, t.stopped);
+        return;
+      }
+      wait.remove();
+      // our own messages as they are; a dropped connection ("Failed to fetch") reads as unavailable
+      const err = add(e.message === t.short ? t.short : e instanceof SyntaxError ? t.broke : t.down, 'bot err');
+      const again = el('button', 'ghost', t.retry); again.type = 'button';
+      again.addEventListener('click', () => { if (busy) return; err.remove(); asked.remove(); ask(text); });
+      err.append(again);
+    } finally { ctrl = null; setBusy(false); q.focus(); }
   }
 
-  document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); const t = q.value.trim(); if (t) { q.value = ''; ask(t); } });
-  document.querySelectorAll('.chips button').forEach(b => b.addEventListener('click', () => ask(b.textContent)));
+  $('f').addEventListener('submit', e => {
+    e.preventDefault();
+    const t = q.value.trim();
+    if (t && !busy) { q.value = ''; ask(t); }
+  });
   reset.addEventListener('click', () => {
     thread = null;
     try { sessionStorage.removeItem('thread'); } catch (e) {}
@@ -254,6 +418,10 @@
     welcome.hidden = false;
     q.focus();
   });
+
+  let saved = null;
+  try { saved = localStorage.getItem('lang'); } catch (e) {}
+  setLang(saved === 'ar' || saved === 'en' ? saved : (navigator.language || '').startsWith('ar') ? 'ar' : 'en');
 </script>
 </body>
 </html>

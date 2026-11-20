@@ -1,11 +1,16 @@
 # AWS overlay: Caddy serves HTTPS on 80/443; the app port is no longer public.
 # Used by deploy/up.sh: docker compose -f docker-compose.yml -f deploy/compose.aws.yml up -d --build
+x-logs: &logs  # Docker keeps container logs forever by default; cap them so the 8 GB disk can't fill up
+  options: {max-size: "10m", max-file: "3"}
+
 services:
   app:
     ports: !reset []
     restart: unless-stopped
+    logging: *logs
   redis:
     restart: unless-stopped
+    logging: *logs
   caddy:
     image: caddy:2.10
     restart: unless-stopped
@@ -16,6 +21,7 @@ services:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data # certificates survive restarts (Let's Encrypt has rate limits)
     depends_on: [app]
+    logging: *logs
 
 volumes:
   caddy-data:

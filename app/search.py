@@ -141,7 +141,8 @@ def listing_card(l, cur=None):
     return {"kind": "listing", "title": l["title"], "badge": f"For {l['purpose']}", "price": _price(l, cur),
             "facts": " · ".join(x for x in [f"{l['bedrooms']} bed" if l["bedrooms"] else "",
                                             f"{l['area_sqm']} sqm" if l["area_sqm"] else "", l["furnishing"] or ""] if x),
-            "place": ", ".join(x for x in [l["district"], l["city"]] if x), "url": l["url"], "source": "Wasalt.sa"}
+            "place": ", ".join(x for x in [l["district"], l["city"]] if x), "url": l["url"], "source": "Wasalt.sa",
+            "lat": float(l["lat"]) if l.get("lat") else None, "lon": float(l["lon"]) if l.get("lon") else None}  # map pins
 
 
 def _shorten(text, n):

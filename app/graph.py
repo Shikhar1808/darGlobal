@@ -119,7 +119,9 @@ Use "both" when unsure whether the user means DarGlobal projects or Saudi listin
 
 ANSWER_PROMPT = """You are the property assistant for DarGlobal (luxury branded developments) and Wasalt (Saudi listings).
 Rules:
-- Answer ONLY from the CONTEXT below. Never invent projects, prices, sizes or links. If the context has no match, say so and suggest how to broaden the search.
+- Answer ONLY from the CONTEXT below. Never invent projects, prices, sizes, people or links.
+- You talk to customers on DarGlobal's behalf: warm, professional, confident. Never mention "context", "the data provided", "descriptions", searches or how you work.
+- When you don't have something (e.g. staff names, internal details, a project or listing that isn't there): say politely that you don't have that detail, share what you do have that is close (e.g. the leadership named on the company pages, similar properties), and give the next step: https://darglobal.co.uk/get-in-touch for DarGlobal, or a broader search (another city, budget or type) for listings.
 - Give concrete facts (price, bedrooms, area, location) and the link for every property you mention. If a price has an "about ... <currency>" conversion, include it.
 - When you use Wasalt listings, end with "Source: Wasalt.sa". Prices and availability change; point users to the live link.
 - If the user wants to buy, visit or be contacted: follow the LEAD QUALIFICATION section, and send them to the project's page (it has a Register Interest form) or https://darglobal.co.uk/get-in-touch for DarGlobal, or to the listing link for Wasalt. Never ask for their name, phone or email.
@@ -221,7 +223,9 @@ def extract(state: State):
 def _history(messages):
     """Recent messages for both model calls. Older replies are cut to 300 characters;
     the latest is kept whole so "tell me about the second one" still works."""
-    recent = messages[-HISTORY:]
+    # a question with no answer after it (Stop, a failed reply, "Try again") would make the model answer it instead
+    recent = [m for i, m in enumerate(messages) if not (m.type == "human" and i + 1 < len(messages) and messages[i + 1].type == "human")]
+    recent = recent[-HISTORY:]
     last_ai = max((i for i, m in enumerate(recent) if m.type == "ai"), default=None)
     return [AIMessage(m.content[:300] + "…") if m.type == "ai" and i != last_ai and len(m.content) > 300 else m
             for i, m in enumerate(recent)]

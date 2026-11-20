@@ -292,3 +292,52 @@ def test_next_key_only_after_an_error_from_openrouter():
         raise AssertionError("expected the timeout")
     except openai.APITimeoutError:
         assert tried == [("k1", "a"), ("k1", "b")]  # a timeout is as slow on k2: don't wait twice
+
+
+def test_feedback_is_saved_and_checked(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import main
+    saved = []
+
+    class FakeRedis:  # records what the endpoint pushes
+        def pipeline(self):
+            return self
+        def lpush(self, key, row):
+            saved.append((key, json.loads(row)))
+            return self
+        def ltrim(self, *a):
+            return self
+        def execute(self):
+            pass
+
+    monkeypatch.setattr(main, "feedback_store", FakeRedis())
+    client = TestClient(main.app)
+    ok = {"thread_id": "t1", "vote": "down", "question": "villas in Riyadh", "answer": "..."}
+    assert client.post("/api/feedback", json=ok).status_code == 204
+    assert saved[0][0] == main.FEEDBACK_KEY and saved[0][1]["vote"] == "down" and saved[0][1]["question"] == "villas in Riyadh"
+    assert client.post("/api/feedback", json={**ok, "vote": "meh"}).status_code == 422
+    assert client.post("/api/feedback", json={**ok, "thread_id": "x\r\n"}).status_code == 422
+
+
+def test_listing_cards_carry_map_coordinates():
+    card = search.listing_card(search.LISTINGS[0])
+    assert isinstance(card["lat"], float) and isinstance(card["lon"], float)
+    assert 15 < card["lat"] < 33 and 34 < card["lon"] < 56  # inside Saudi Arabia
+
+
+def test_unanswered_question_is_not_sent_again(monkeypatch):
+    seen = []
+
+    class Spy(FakeLLM):
+        def stream(self, msgs):
+            seen.append([m.content for m in msgs[1:] if m.type == "human"])
+            return super().stream(msgs)
+
+    monkeypatch.setattr(graph, "llm", Spy())
+    parts = graph.chat_stream("villas in Riyadh", "stop1")
+    next(parts)  # cards arrived, then the user pressed Stop
+    parts.close()
+    graph.chat("projects in Oman", "stop1")
+    graph.chat("and in Dubai?", "stop1")
+    assert seen[0] == ["projects in Oman"]  # the stopped question isn't answered instead
+    assert seen[1] == ["projects in Oman", "and in Dubai?"]  # answered questions stay for follow-ups

@@ -2,7 +2,7 @@
 
 A bilingual (English / Arabic) property chatbot over public data scraped from **DarGlobal** (32 luxury branded projects in 6 countries, plus the company's FAQ, visa, office and partner pages) and **Wasalt** (571 Saudi listings for sale and rent). Built with LangGraph, hybrid search, a free OpenRouter model, Redis and Docker.
 
-**Live demo:** _AWS link goes here_
+**Live demo:** https://darglobal.shikharsaxena.space
 
 ## What it does
 
@@ -13,7 +13,10 @@ A bilingual (English / Arabic) property chatbot over public data scraped from **
 - **Qualifies leads for the sales team.** When someone wants to buy or visit, the bot scores the lead (budget, location, timeline, purpose → hot / warm / cold), asks for the one missing detail, then hands off to the project's Register Interest form. It never collects names, phones or emails.
 - **Feels fast.** Replies stream as they are written, the page shows what stage it is at ("Found 8 matches, writing the answer…"), results appear as cards, and repeated questions are answered from a Redis cache in about 0.1 s.
 - **Remembers the conversation.** "Cheaper ones?" and "tell me more about the third one" work; chats live in Redis and expire after 24 hours idle. "New chat" starts over.
-- **Reads Arabic properly.** Arabic questions get Arabic answers, laid out right to left.
+- **Reads Arabic properly.** Arabic questions get Arabic answers, laid out right to left; the whole page switches to Arabic with one button.
+- **Shows Saudi results on a map.** Listings the answer mentions are pinned on an OpenStreetMap map under the cards.
+- **Lets people stop, retry and rate.** Stop a long reply, retry a failed one, and mark answers helpful or not; ratings are saved in Redis as the start of an eval set from real questions.
+- **Talks like a company representative.** When it doesn't know something (staff names, a missing project) it says so politely, shares what is close and points to DarGlobal's contact page.
 
 ## Architecture
 
@@ -53,7 +56,7 @@ flowchart LR
 
 The end-to-end evaluation (source routing, filter-field accuracy, language match, attribution, invented links removed, latency p50/p95) is in the same script. Its results go here once run against the live model.
 
-Unit tests: `uv run pytest` (31 tests, no API key needed): filters, city spellings, monthly vs yearly rent, relaxation, vector search incl. Arabic, company pages, link guard incl. links split across streamed pieces, lead scoring, currency conversion, the cache, key fallback, streaming API and the 503 path.
+Unit tests: `uv run pytest` (34 tests, no API key needed): filters, city spellings, monthly vs yearly rent, relaxation, vector search incl. Arabic, company pages, link guard incl. links split across streamed pieces, lead scoring, currency conversion, the cache, key fallback, feedback, stopped turns, streaming API and the 503 path. `node --test tests/render.test.mjs` (3 tests) checks the page escapes model text before showing it.
 
 ## Decisions
 
@@ -82,7 +85,10 @@ Every choice, with the reason and what it replaced or ruled out.
 - **Chat history kept in the filter step.** Removing it saved more tokens but broke "tell me more about the third one".
 
 **Serving**
-- **FastAPI + one HTML page.** No build step; the page streams answers, shows a stage-aware status and result cards for the properties the answer mentions.
+- **FastAPI + one HTML page.** No build step; the page streams answers, shows a stage-aware status and result cards for the properties the answer mentions. Replies render lists, bold and links from a small escaped subset of markdown (no library, no raw HTML from the model).
+- **Map loaded only when needed.** Leaflet and OpenStreetMap tiles load on the first answer with Saudi listings, so the first page stays light.
+- **An unanswered question isn't sent again.** After Stop or a failed reply, the model would see two questions in a row and answer the old one (found while testing Stop). The history sent to the model drops a question followed directly by another; this also holds when the user asks again before the stopped reply has ended on the server.
+- **Feedback in Redis, not a database.** `POST /api/feedback` keeps the last 10,000 votes with question and answer (`redis-cli lrange darglobal:feedback 0 -1`). It stores the question and answer as typed, newest 10,000 kept; the log gets only the vote. Container logs are capped at 30 MB each on AWS.
 - **NDJSON stream.** One line with result cards, then text pieces, so cards and text arrive on the same connection.
 - **Redis for the model cache (7 days) and chat memory (24 h).** Survives restarts and redeploys and expires on its own; without `REDIS_URL` it falls back to memory.
 - **Redis in Docker Compose.** `redis:8` includes the modules LangGraph's Redis memory needs, which managed services like ElastiCache lack.

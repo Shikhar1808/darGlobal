@@ -1,14 +1,17 @@
 import json
 import logging
+import time
 import uuid
 from pathlib import Path
+from typing import Literal
 
+import redis
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.graph import KEYS, chat_stream
+from app.graph import KEYS, REDIS_URL, chat_stream
 
 log = logging.getLogger("uvicorn.error")
 if KEYS:
@@ -17,11 +20,12 @@ else:
     log.warning("No OPENROUTER_API_KEY set: every chat request will fail")
 app = FastAPI(title="DarGlobal & Wasalt property chatbot")
 INDEX = Path(__file__).parent / "static" / "index.html"
+THREAD_ID = r"^[A-Za-z0-9_-]{1,64}$"
 
 
 class ChatIn(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
-    thread_id: str = Field(default_factory=lambda: uuid.uuid4().hex, pattern=r"^[A-Za-z0-9_-]{1,64}$")  # goes into a header and Redis keys
+    thread_id: str = Field(default_factory=lambda: uuid.uuid4().hex, pattern=THREAD_ID)  # goes into a header and Redis keys
 
 
 BUSY = "The AI model is busy right now. Please try again in a minute."
@@ -55,6 +59,29 @@ async def api_chat(body: ChatIn):
 
     return StreamingResponse(rest(), media_type="application/x-ndjson",
                              headers={"X-Thread-Id": body.thread_id, "X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
+
+
+FEEDBACK_KEY = "darglobal:feedback"
+feedback_store = redis.Redis.from_url(REDIS_URL) if REDIS_URL else None
+
+
+class FeedbackIn(BaseModel):
+    thread_id: str = Field(pattern=THREAD_ID)
+    vote: Literal["up", "down"]
+    question: str = Field(max_length=1000)
+    answer: str = Field(max_length=8000)
+
+
+@app.post("/api/feedback", status_code=204)
+def api_feedback(body: FeedbackIn):
+    """Thumbs up/down on a reply: the start of an eval set built from real questions."""
+    row = json.dumps({**body.model_dump(), "at": int(time.time())}, ensure_ascii=False)
+    log.info("feedback %s %s", body.vote, body.thread_id)  # not the text: anyone can post, and logs live on disk
+    if feedback_store:  # shortcut: without Redis feedback is only in the log
+        try:  # newest first, capped so the list can't grow forever
+            feedback_store.pipeline().lpush(FEEDBACK_KEY, row).ltrim(FEEDBACK_KEY, 0, 9999).execute()
+        except redis.RedisError:
+            log.exception("feedback not saved")
 
 
 @app.get("/health")
