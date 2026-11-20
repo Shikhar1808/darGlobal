@@ -1,0 +1,12 @@
+.venv
+.git
+.env
+__pycache__
+.pytest_cache
+tests
+scraper
+data/*.raw.json
+*.md
+docs
+.models
+data/embeddings.npz

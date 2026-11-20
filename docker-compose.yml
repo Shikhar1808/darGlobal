@@ -1,0 +1,24 @@
+# Local stack: chatbot + Redis. `docker compose up --build`, then open http://localhost:7860
+services:
+  redis:
+    image: redis:8  # Redis 8 includes the Search and JSON features LangGraph's Redis memory needs
+    command: ["redis-server", "--appendonly", "yes"]  # write to disk so the cache and chats survive restarts
+    volumes: [redis-data:/data]
+    ports: ["127.0.0.1:6380:6379"]  # localhost only (no password); 6380 because a Windows Redis already uses 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379  # overrides .env: inside Compose, Redis is reached by service name
+    ports: ["7860:7860"]
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis-data:

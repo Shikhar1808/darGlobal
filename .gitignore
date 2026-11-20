@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets
+.env
+.pytest_cache
+.models/
+data/embeddings.npz
+
+# Internal notes (decisions, changelog); summarised in README.md
+docs/

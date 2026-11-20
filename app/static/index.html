@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Property Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef2f1; --panel: #ffffff; --ink: #14232b; --muted: #5b6b70; --line: #d5dedc;
+    --deep: #123447; --deep-ink: #f2f6f5; --sea: #2e8a78; --brass: #a8844a; --err: #b3261e;
+    --display: "Bricolage Grotesque", system-ui, sans-serif;
+    --body: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0c1b24; --panel: #13262f; --ink: #e4ecea; --muted: #94a6a9; --line: #24404b;
+            --deep: #1d4a60; --deep-ink: #eef4f3; --sea: #5fb3a1; --brass: #c9a66a; --err: #ff8a80; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body);
+         height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; }
+  .wrap { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 16px; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
+
+  header { border-bottom: 1px solid var(--line); background: var(--panel); }
+  header .wrap { display: flex; align-items: center; gap: 12px; min-height: 56px; }
+  header h1 { margin: 0; font: 600 18px/1.2 var(--display); letter-spacing: -.01em; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  #reset { margin-left: auto; flex: none; border: 1px solid var(--line); background: transparent; border-radius: 8px;
+           padding: 6px 12px; font-size: 14px; cursor: pointer; }
+  #reset:hover { border-color: var(--muted); }
+  #reset:disabled { opacity: .5; cursor: wait; }
+
+  #scroll { overflow-y: auto; }
+  #log { display: flex; flex-direction: column; gap: 20px; padding-block: 28px; }
+
+  .welcome h2 { margin: 8px 0 12px; font: 650 clamp(32px, 6vw, 52px)/1.04 var(--display); letter-spacing: -.025em;
+                color: var(--deep); max-width: 15ch; }
+  @media (prefers-color-scheme: dark) { .welcome h2 { color: var(--ink); } }
+  .welcome > p { margin: 0 0 28px; color: var(--muted); max-width: 58ch; }
+  .groups { display: grid; gap: 22px; }
+  .group h3 { margin: 0 0 8px; font: 600 15px/1.3 var(--display); display: flex; align-items: center; gap: 8px; }
+  .group h3::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--c); }
+  .group { --c: var(--sea); }
+  .group.dg { --c: var(--brass); }
+  .group.buy { --c: var(--deep); }
+  @media (prefers-color-scheme: dark) { .group.buy { --c: var(--muted); } }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 7px 14px;
+                  font-size: 14px; line-height: 1.4; cursor: pointer; text-align: start; }
+  .chips button:hover { border-color: var(--c); }
+
+  .msg { white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+  .user { align-self: flex-end; max-width: 80%; background: var(--deep); color: var(--deep-ink);
+          padding: 9px 16px; border-radius: 20px 20px 6px 20px; }
+  .bot { align-self: stretch; padding-inline-start: 16px; border-inline-start: 2px solid var(--sea); }
+  .bot a { color: var(--sea); text-underline-offset: 2px; }
+  .err { border-color: var(--err); color: var(--err); }
+  .status { color: var(--muted); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) { .status { animation: none; } }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--sea); border-radius: 6px;
+          padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; line-height: 1.45; }
+  .card.project { border-top-color: var(--brass); }
+  .card .src { font-size: 12px; color: var(--muted); }
+  .card h4 { margin: 2px 0 2px; font: 600 16px/1.25 var(--display); }
+  .card .price { font-weight: 600; }
+  .card .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); }
+  .card .place { color: var(--muted); }
+  .card a { margin-top: auto; padding-top: 8px; color: var(--sea); font-weight: 600; text-decoration: none; }
+  .card.project a { color: var(--brass); }
+  .card a:hover { text-decoration: underline; }
+
+  footer { border-top: 1px solid var(--line); background: var(--panel); padding-block: 12px 10px; }
+  form { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+  input:focus-visible { outline-offset: 0; }
+  #send { padding: 0 22px; border: 0; border-radius: 12px; background: var(--deep); color: var(--deep-ink); font-weight: 600; cursor: pointer; }
+  #send:disabled { opacity: .5; cursor: wait; }
+  footer small { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 520px) { header p { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Property Assistant</h1>
+    <p>DarGlobal projects and Saudi homes on Wasalt, in English or العربية</p>
+    <button id="reset" type="button">New chat</button>
+  </div>
+</header>
+<div id="scroll">
+  <main id="log" class="wrap" aria-live="polite">
+    <section class="welcome" id="welcome">
+      <h2>Ask about a home, a project, or how buying works.</h2>
+      <p>I search DarGlobal's 32 branded developments and company pages, and 571 homes for sale and rent in Saudi Arabia on Wasalt. Every property comes with a link to its page.</p>
+      <div class="groups">
+        <div class="group dg">
+          <h3>DarGlobal projects</h3>
+          <div class="chips">
+            <button>Which DarGlobal projects are in Oman?</button>
+            <button>Apartments with Aston Martin interiors</button>
+            <button>مشاريع دار جلوبال في إسبانيا</button>
+          </div>
+        </div>
+        <div class="group">
+          <h3>Homes for sale and rent in Saudi Arabia</h3>
+          <div class="chips">
+            <button>3-bedroom apartments for sale in Jeddah under 1M SAR</button>
+            <button>Apartments for rent in Riyadh under £2,000 a month</button>
+            <button>فلل للإيجار في الرياض</button>
+          </div>
+        </div>
+        <div class="group buy">
+          <h3>Buying with DarGlobal</h3>
+          <div class="chips">
+            <button>Can I get a golden visa if I buy in Dubai?</button>
+            <button>I want to buy a Trump villa in Oman, how do I register?</button>
+            <button>ما هي خطط الدفع المتاحة؟</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<footer>
+  <div class="wrap">
+    <form id="f">
+      <input id="q" dir="auto" autocomplete="off" maxlength="1000" placeholder="Ask about a property, a project or buying…" aria-label="Your question" required>
+      <button id="send">Ask</button>
+    </form>
+    <small>Prices and availability change. Check the linked page before you decide.</small>
+  </div>
+</footer>
+<script>
+  const log = document.getElementById('log'), scroll = document.getElementById('scroll'), q = document.getElementById('q'),
+        send = document.getElementById('send'), welcome = document.getElementById('welcome');
+  let thread = null;
+  try { thread = sessionStorage.getItem('thread'); } catch (e) {}
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  function toBottom() { scroll.scrollTop = scroll.scrollHeight; }
+
+  function add(text, cls) {
+    const d = el('div', 'msg ' + cls);
+    d.dir = 'auto';  // Arabic replies read right to left
+    log.appendChild(d);
+    return show(d, text);
+  }
+
+  function show(d, text) {
+    d.textContent = text;
+    // turn bare URLs into links (text was inserted safely as textContent first)
+    d.innerHTML = d.innerHTML.replace(/https?:\/\/[^\s<>")\]،؛]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+    toBottom();
+    return d;
+  }
+
+  // result cards, only for properties the answer mentions (so cards and text agree)
+  function addCards(cards, reply) {
+    const shown = cards.filter(c => /^https:\/\//.test(c.url) && reply.includes(c.url));
+    if (!shown.length) return;
+    const box = el('div', 'cards');
+    for (const c of shown) {
+      const card = el('article', 'card ' + c.kind);
+      card.append(el('span', 'src', c.badge), el('h4', '', c.title));
+      if (c.price) card.append(el('span', 'price', c.price));
+      if (c.facts) {
+        const facts = el('span', 'facts');
+        // project cards carry a sentence; listing cards a short list of facts
+        (c.kind === 'listing' ? c.facts.split(' · ') : [c.facts]).forEach(f => facts.append(el('span', '', f)));
+        card.append(facts);
+      }
+      if (c.place) card.append(el('span', 'place', c.place));
+      const a = el('a', '', 'View on ' + c.source);
+      a.href = c.url; a.target = '_blank'; a.rel = 'noopener';
+      card.append(a);
+      box.append(card);
+    }
+    log.appendChild(box);
+    toBottom();
+  }
+
+  let busy = false;  // one reply at a time: a second request or "New chat" mid-reply would mix two chats
+  const reset = document.getElementById('reset');
+
+  async function ask(text) {
+    if (busy) return;
+    busy = reset.disabled = true;
+    welcome.hidden = true;
+    add(text, 'user');
+    // the server sends nothing until the answer starts, so this shows while filters are extracted and data searched
+    const arabic = /[؀-ۿ]/.test(text);
+    const wait = add(arabic ? 'جارٍ البحث في العقارات والمشاريع…' : 'Searching listings and projects…', 'bot status');
+    send.disabled = true;
+    try {
+      const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(thread ? { message: text, thread_id: thread } : { message: text }) });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));  // proxies return HTML on timeout
+        throw new Error(typeof data.detail === 'string' ? data.detail
+          : r.status === 422 ? 'Please send a shorter message.' : 'The assistant is unavailable right now. Try again in a minute.');
+      }
+      thread = r.headers.get('X-Thread-Id') || thread;
+      try { sessionStorage.setItem('thread', thread); } catch (e) {}
+      // NDJSON stream: {"cards": [...]} once, then {"t": "..."} text pieces
+      const reader = r.body.getReader(), dec = new TextDecoder();
+      let buf = '', reply = '', cards = [];
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line) continue;
+          const ev = JSON.parse(line);
+          if (ev.cards) {
+            cards = ev.cards;
+            show(wait, arabic ? 'وجدنا ' + cards.length + ' نتيجة، جارٍ كتابة الرد…' : 'Found ' + cards.length + ' matches, writing the answer…');
+          } else if (ev.t) {
+            reply += ev.t;
+            wait.classList.remove('status');
+            show(wait, reply);
+          }
+        }
+      }
+      wait.classList.remove('status');
+      if (!reply) show(wait, 'No reply came back. Ask again.');
+      addCards(cards, reply);
+    } catch (e) {
+      wait.remove(); add(typeof e.message === 'string' ? e.message : 'Something went wrong. Ask again.', 'bot err');
+    } finally { busy = reset.disabled = send.disabled = false; q.focus(); }
+  }
+
+  document.getElementById('f').addEventListener('submit', e => { e.preventDefault(); const t = q.value.trim(); if (t) { q.value = ''; ask(t); } });
+  document.querySelectorAll('.chips button').forEach(b => b.addEventListener('click', () => ask(b.textContent)));
+  reset.addEventListener('click', () => {
+    thread = null;
+    try { sessionStorage.removeItem('thread'); } catch (e) {}
+    log.replaceChildren(welcome);
+    welcome.hidden = false;
+    q.focus();
+  });
+</script>
+</body>
+</html>
